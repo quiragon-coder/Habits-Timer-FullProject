@@ -33,6 +33,7 @@ class ActivityDetailPage extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 🔁 Titre réactif via DAO helpers (watchAll)
     final activitiesAsync = ref.watch(activitiesStreamProvider);
     final activity = activitiesAsync.maybeWhen(
       data: (list) => list.firstWhere(
@@ -42,10 +43,12 @@ class ActivityDetailPage extends HookConsumerWidget {
       orElse: () => Activity(id: activityId, name: 'Activité', emoji: null, color: null, createdAtUtc: 0),
     );
 
+    // Timer state + actions
     final timerState = ref.watch(activeTimerProvider(activityId));
     final timer = ref.read(activeTimerProvider(activityId).notifier);
     final isRunning = timerState?.status == TimerStatus.running;
 
+    // Ticker UI pendant que ça tourne
     useEffect(() {
       if (!isRunning) return null;
       final t = Timer.periodic(const Duration(seconds: 1), (_) {});
@@ -54,10 +57,12 @@ class ActivityDetailPage extends HookConsumerWidget {
 
     final elapsed = timerState?.elapsed ?? Duration.zero;
 
+    // Data providers
     final totals = ref.watch(totalsProvider(activityId));
     final last7 = ref.watch(last7DaysTotalsProvider(activityId));
     final history = ref.watch(recentHistoryProvider(activityId));
     final goalProgress = ref.watch(goalProgressProvider(activityId));
+    // (heatmap provider est consommé par MiniHeatmapSection)
 
     final title = (activity.emoji?.isNotEmpty == true)
         ? '${activity.emoji} ${activity.name}'
@@ -68,6 +73,7 @@ class ActivityDetailPage extends HookConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // TIMER CARD
           Card(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Padding(
@@ -117,6 +123,7 @@ class ActivityDetailPage extends HookConsumerWidget {
           ),
 
           const SizedBox(height: 24),
+          // Mini heatmap (8 dernières semaines) avec double‑tap => overview
           MiniHeatmapSection(activityId: activityId),
 
           const SizedBox(height: 24),
@@ -124,6 +131,7 @@ class ActivityDetailPage extends HookConsumerWidget {
           const SizedBox(height: 8),
           history.when(
             data: (list) {
+              // group by local day
               final Map<DateTime, List<dynamic>> groups = {};
               for (final s in list) {
                 final startLocal = DateTime.fromMillisecondsSinceEpoch(s.startUtc * 1000, isUtc: true).toLocal();

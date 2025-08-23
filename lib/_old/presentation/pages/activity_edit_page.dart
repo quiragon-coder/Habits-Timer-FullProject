@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../application/providers/providers.dart';
-import '../../application/providers/goals_provider.dart';
 import '../../infrastructure/db/database.dart';
 import '../../infrastructure/db/activity_dao_extras.dart';
 import 'activity_detail_page.dart';
@@ -268,8 +267,7 @@ class _ActivityEditPageState extends ConsumerState<ActivityEditPage> {
 
     // Utilise la table goals générée par Drift (insert OR REPLACE).
     // Si ta table s'appelle différemment ou si les colonnes ont d'autres noms, adapte ici.
-    final goalDao = ref.read(goalDaoProvider);
-    await goalDao.upsertGoal(
+    await db.into(db.goals).insertOnConflictUpdate(
       GoalsCompanion(
         activityId: Value(id),
         minutesPerWeek: Value(minutesPerWeek),
