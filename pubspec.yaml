@@ -1,0 +1,27 @@
+name: habits_timer
+description: Habits Timer - Timer with Drift persistence (sessions/pauses) + history + totals
+publish_to: "none"
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  hooks_riverpod: any
+  flutter_hooks: any
+  fl_chart: any
+  drift: any
+  drift_flutter: any
+  sqlite3_flutter_libs: any
+  intl: any
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: any
+  drift_dev: any
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true

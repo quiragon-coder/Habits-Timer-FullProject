@@ -1,0 +1,50 @@
+enum TimerStatus { idle, running, paused }
+
+class ActiveTimerState {
+  final int activityId;
+  final int sessionId; // persisted session id
+  final TimerStatus status;
+
+  /// UTC timestamps
+  final DateTime startedAtUtc;
+  final DateTime? lastResumeAtUtc;
+  final DateTime? endedAtUtc;
+
+  /// Duration already accumulated excluding current running slice.
+  final Duration accumulated;
+
+  const ActiveTimerState({
+    required this.activityId,
+    required this.sessionId,
+    required this.status,
+    required this.startedAtUtc,
+    required this.accumulated,
+    this.lastResumeAtUtc,
+    this.endedAtUtc,
+  });
+
+  Duration get elapsed {
+    if (status == TimerStatus.running && lastResumeAtUtc != null) {
+      return accumulated + DateTime.now().toUtc().difference(lastResumeAtUtc!);
+    }
+    return accumulated;
+  }
+
+  ActiveTimerState copyWith({
+    TimerStatus? status,
+    DateTime? startedAtUtc,
+    DateTime? lastResumeAtUtc,
+    DateTime? endedAtUtc,
+    Duration? accumulated,
+  }) {
+    return ActiveTimerState(
+      activityId: activityId,
+      sessionId: sessionId,
+      status: status ?? this.status,
+      startedAtUtc: startedAtUtc ?? this.startedAtUtc,
+      lastResumeAtUtc: lastResumeAtUtc ?? this.lastResumeAtUtc,
+      endedAtUtc: endedAtUtc ?? this.endedAtUtc,
+      accumulated: accumulated ?? this.accumulated,
+    );
+  }
+}
