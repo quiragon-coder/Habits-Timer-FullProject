@@ -14,35 +14,23 @@ extension ActivityDaoExtras on ActivityDao {
       if (sessionsRows.isNotEmpty) {
         final sessionIds = sessionsRows.map((s) => s.id).toList();
         // Supprimer d’abord les pauses rattachées aux sessions
-        await (db.delete(db.pauses)..where((p) => p.sessionId.isIn(sessionIds)))
-            .go();
+        await (db.delete(db.pauses)..where((p) => p.sessionId.isIn(sessionIds))).go();
         // Puis les sessions
-        await (db.delete(db.sessions)
-          ..where((s) => s.activityId.equals(activityId)))
-            .go();
+        await (db.delete(db.sessions)..where((s) => s.id.isIn(sessionIds))).go();
       }
 
-      // Goals de l’activité
-      await (db.delete(db.goals)..where((g) => g.activityId.equals(activityId)))
-          .go();
+      // Supprimer les goals de l’activité
+      await (db.delete(db.goals)..where((g) => g.activityId.equals(activityId))).go();
 
-      // Enfin l’activité elle-même
-      await (db.delete(db.activities)..where((a) => a.id.equals(activityId)))
-          .go();
+      // Enfin l’activité
+      await (db.delete(db.activities)..where((a) => a.id.equals(activityId))).go();
     });
   }
 
-  /// Liste simple (non streamée)
-  Future<List<Activity>> getAll() {
-    return (db.select(db.activities)
-      ..orderBy([(t) => drift.OrderingTerm.asc(t.createdAt)]))
-        .get();
-  }
-
-  /// Stream de toutes les activités
+  /// Stream de toutes les activités, triées par id croissant (compatible avec tous les schémas).
   Stream<List<Activity>> watchAll() {
     return (db.select(db.activities)
-      ..orderBy([(t) => drift.OrderingTerm.asc(t.createdAt)]))
+      ..orderBy([(t) => drift.OrderingTerm.asc(t.id)]))
         .watch();
   }
 

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import '../../application/services/haptics_service.dart';
+import '../../application/providers/settings_provider.dart';
 
-class TimerControls extends StatelessWidget {
+class TimerControls extends ConsumerWidget {
   final bool isRunning;
   final VoidCallback onPlay;
   final VoidCallback onPause;
@@ -15,33 +18,46 @@ class TimerControls extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
+    final haptics = HapticsService(enabled: settings.hapticsEnabled);
+
     final btnStyle = ElevatedButton.styleFrom(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      visualDensity: VisualDensity.compact,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
 
     return Wrap(
-      alignment: WrapAlignment.center,
       spacing: 12,
-      runSpacing: 8,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
       children: [
         ElevatedButton.icon(
           style: btnStyle,
-          onPressed: isRunning ? null : onPlay,
+          onPressed: () {
+            onPlay();
+            haptics.play();
+          },
           icon: const Icon(Icons.play_arrow),
-          label: const Text('Lancer'),
+          label: const Text('Play'),
         ),
         ElevatedButton.icon(
           style: btnStyle,
-          onPressed: isRunning ? onPause : null,
+          onPressed: isRunning
+              ? () {
+                  onPause();
+                  haptics.pause();
+                }
+              : null,
           icon: const Icon(Icons.pause),
           label: const Text('Pause'),
         ),
         ElevatedButton.icon(
           style: btnStyle,
-          onPressed: onStop,
+          onPressed: () {
+            onStop();
+            haptics.stop();
+          },
           icon: const Icon(Icons.stop),
           label: const Text('Stop'),
         ),

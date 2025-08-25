@@ -1,76 +1,107 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import '../../infrastructure/db/database.dart';
-import '../services/time_utils.dart';
-import 'providers.dart';
+import 'package:flutter/foundation.dart';
+import '../../presentation/pages/heatmap_overview_page.dart' show dailyTotalsProvider;
 
+@immutable
 class HeatDay {
-  final DateTime day; // UTC at 00:00
+  final DateTime day;   // local calendar day (00:00)
   final int minutes;
-  HeatDay(this.day, this.minutes);
+  const HeatDay({required this.day, required this.minutes});
 }
 
-Future<List<HeatDay>> _computeHeatmap(
-  Ref ref,
-  int activityId, {
-  required DateTime startLocal,
-  required DateTime endLocalExclusive,
-}) async {
-  final sessionDao = ref.read(sessionDaoProvider);
-  final pauseDao = ref.read(pauseDaoProvider);
+List<HeatDay> _normalizeToHeatDays(dynamic totals) {
+  final List<HeatDay> out = [];
+  if (totals == null) return out;
 
-  final days = endLocalExclusive.difference(startLocal).inDays;
-  final Map<DateTime, int> minutesPerDay = {};
-  for (int i = 0; i < days; i++) {
-    final d = DateTime(startLocal.year, startLocal.month, startLocal.day + i);
-    minutesPerDay[d.toUtc()] = 0;
-  }
-
-  final sessions = await sessionDao.recentSessionsForActivity(activityId, limit: 5000);
-  final startUtc = startLocal.toUtc();
-  final endUtc = endLocalExclusive.toUtc();
-
-  for (final s in sessions) {
-    final pauses = await pauseDao.pausesForSession(s.id);
-    final sStart = DateTime.fromMillisecondsSinceEpoch(s.startUtc * 1000, isUtc: true);
-    final sEnd = DateTime.fromMillisecondsSinceEpoch((s.endUtc ?? (DateTime.now().toUtc().millisecondsSinceEpoch ~/ 1000)) * 1000, isUtc: true);
-
-    if (sEnd.isBefore(startUtc) || sStart.isAfter(endUtc)) continue;
-
-    for (int i = 0; i < days; i++) {
-      final dayStartLocal = DateTime(startLocal.year, startLocal.month, startLocal.day + i);
-      final dayEndLocal = dayStartLocal.add(const Duration(days: 1));
-      final d = effectiveOverlapDuration(
-        sStart,
-        sEnd,
-        pauses,
-        dayStartLocal.toUtc(),
-        dayEndLocal.toUtc(),
-      );
-      if (d > Duration.zero) {
-        final key = DateTime(dayStartLocal.year, dayStartLocal.month, dayStartLocal.day).toUtc();
-        minutesPerDay[key] = (minutesPerDay[key] ?? 0) + d.inMinutes;
+  // Case 1: Map<DateTime, Duration> or Map<DateTime, int>
+  if (totals is Map) {
+    for (final entry in totals.entries) {
+      final key = entry.key;
+      final val = entry.value;
+      if (key is DateTime) {
+        final date = DateTime(key.year, key.month, key.day);
+        int minutes = 0;
+        if (val is Duration) {
+          minutes = val.inMinutes;
+        } else if (val is int) {
+          minutes = val;
+        }
+        out.add(HeatDay(day: date, minutes: minutes));
       }
     }
+    out.sort((a, b) => a.day.compareTo(b.day));
+    return out;
   }
 
-  return minutesPerDay.entries.map((e) => HeatDay(e.key, e.value)).toList()
-    ..sort((a, b) => a.day.compareTo(b.day));
+  // Case 2: List of models or maps
+  if (totals is List) {
+    for (final t in totals) {
+      DateTime? d;
+      int m = 0;
+      try {
+        // Access as model first
+        final dynamic dyn = t;
+        final dynamic maybeDate = (dyn.date ?? dyn.day ?? dyn['date'] ?? dyn['day']);
+        if (maybeDate is DateTime) {
+          d = DateTime(maybeDate.year, maybeDate.month, maybeDate.day);
+        } else if (maybeDate is String) {
+          d = DateTime.tryParse(maybeDate);
+          if (d != null) d = DateTime(d.year, d.month, d.day);
+        }
+        final dynamic minutesField = (dyn.minutes ?? dyn['minutes']);
+        final dynamic durationField = (dyn.duration ?? dyn['duration']);
+        if (minutesField is int) {
+          m = minutesField;
+        } else if (durationField is Duration) {
+          m = durationField.inMinutes;
+        }
+      } catch (_) {
+        // ignore malformed row
+      }
+      if (d != null) {
+        out.add(HeatDay(day: d, minutes: m));
+      }
+    }
+    out.sort((a, b) => a.day.compareTo(b.day));
+    return out;
+  }
+
+  // Fallback empty
+  return out;
 }
 
-/// 365 derniers jours (aujourd'hui inclus)
-final last365HeatmapProvider = FutureProvider.family<List<HeatDay>, int>((ref, activityId) async {
-  final nowLocal = DateTime.now();
-  final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
-  final startLocal = todayLocal.subtract(const Duration(days: 364));
-  final endLocalExclusive = todayLocal.add(const Duration(days: 1));
-  return _computeHeatmap(ref, activityId, startLocal: startLocal, endLocalExclusive: endLocalExclusive);
+final last365DaysHeatmapProvider = FutureProvider.family<List<HeatDay>, int>((ref, activityId) async {
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final start = todayStart.subtract(const Duration(days: 364));
+  final end = todayStart.add(const Duration(days: 1));
+
+  final totals = await ref.watch(dailyTotalsProvider((
+    activityId: activityId,
+    startLocal: start,
+    endLocal: end,
+  )).future);
+
+  final days = _normalizeToHeatDays(totals);
+  // Keep only within [start, end)
+  return days.where((e) => !e.day.isBefore(start) && e.day.isBefore(end)).toList();
 });
 
-/// 8 dernières semaines ~ 56 jours (mini heatmap)
 final last8WeeksHeatmapProvider = FutureProvider.family<List<HeatDay>, int>((ref, activityId) async {
-  final nowLocal = DateTime.now();
-  final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
-  final startLocal = todayLocal.subtract(const Duration(days: 55));
-  final endLocalExclusive = todayLocal.add(const Duration(days: 1));
-  return _computeHeatmap(ref, activityId, startLocal: startLocal, endLocalExclusive: endLocalExclusive);
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final start = todayStart.subtract(const Duration(days: 55));
+  final end = todayStart.add(const Duration(days: 1));
+
+  final totals = await ref.watch(dailyTotalsProvider((
+    activityId: activityId,
+    startLocal: start,
+    endLocal: end,
+  )).future);
+
+  final days = _normalizeToHeatDays(totals);
+  return days.where((e) => !e.day.isBefore(start) && e.day.isBefore(end)).toList();
 });
+
+/// Backward-compat alias for existing widgets expecting this symbol.
+final last365HeatmapProvider = last365DaysHeatmapProvider;

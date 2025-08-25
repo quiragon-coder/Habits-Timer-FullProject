@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../application/providers/unified_providers.dart';
+import '../../application/providers/goals_select_provider.dart';
+import '../../application/providers/periods_provider.dart';
+import '../../application/providers/settings_provider.dart';
+import '../../application/services/haptics_service.dart';
 import '../../infrastructure/db/database.dart';
 import '../pages/heatmap_overview_page.dart' show dailyTotalsProvider;
 
@@ -11,99 +15,80 @@ class GoalProgressCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final goalAsync = ref.watch(goalDaoProvider.selectSingle(activityId));
+    final goalAsync = ref.watch(goalSingleProvider(activityId));
+    final weekNow = ref.watch(currentWeekStatsProvider(activityId));
+    final settings = ref.watch(settingsProvider);
+
     final now = DateTime.now();
-
-    // Fenêtre jour & semaine (local)
-    final dayStart = DateTime(now.year, now.month, now.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
-
-    final weekStart =
-    dayStart.subtract(Duration(days: dayStart.weekday % 7)); // lundi=1…dim=7 -> iso
-    final weekEnd = weekStart.add(const Duration(days: 7));
-
-    final dayTotals = ref.watch(dailyTotalsProvider((
-    activityId: activityId,
-    startLocal: dayStart,
-    endLocal: dayEnd,
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final todayEnd = todayStart.add(const Duration(days: 1));
+    final todayTotals = ref.watch(dailyTotalsProvider((
+      activityId: activityId,
+      startLocal: todayStart,
+      endLocal: todayEnd,
     )));
-    final weekTotals = ref.watch(dailyTotalsProvider((
-    activityId: activityId,
-    startLocal: weekStart,
-    endLocal: weekEnd,
-    )));
+
+    final minutesToday = todayTotals.maybeWhen(
+      data: (listOrMap) => _extractMinutesFromTotals(listOrMap),
+      orElse: () => 0,
+    );
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16.0),
         child: goalAsync.when(
           data: (goal) {
-            if (goal == null) {
-              return const Text("Aucun objectif défini.");
+            final int goalMinutesPerDay = (goal?.minutesPerDay ?? 0);
+            final int goalMinutesPerWeek = (goal?.minutesPerWeek ?? 0);
+
+            final haptics = HapticsService(enabled: settings.hapticsEnabled);
+            if (goalMinutesPerDay > 0 && minutesToday >= goalMinutesPerDay) {
+              // feu vert : objectif du jour atteint
+              haptics.play();
             }
 
-            final minutesPerDay = goal.minutesPerDay ?? 0;
-            final minutesPerWeek = goal.minutesPerWeek ?? 0;
-            final daysPerWeek = goal.daysPerWeek ?? 0;
+            final weekMinutes = weekNow.maybeWhen(
+              data: (s) => s.duration.inMinutes,
+              orElse: () => 0,
+            );
 
-            final daySpent = dayTotals.value?[dayStart]?.inMinutes ?? 0;
-            final weekSpentMinutes = weekTotals.value?.values
-                .fold<int>(0, (a, d) => a + d.inMinutes) ??
-                0;
-
-            // Jours actifs dans la semaine (>= 10 min)
-            final activeDays = (weekTotals.value ?? {})
-                .entries
-                .where((e) => e.value.inMinutes >= 10)
-                .length;
-
-            Widget row(String title, String value, bool achieved) {
-              final color = achieved
-                  ? Theme.of(context).colorScheme.primary
-                  : Theme.of(context).colorScheme.onSurfaceVariant;
-              return Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.bodyMedium),
-                  Text(value,
-                      style: Theme.of(context)
-                          .textTheme
-                          .labelLarge
-                          ?.copyWith(color: color)),
-                ],
-              );
+            if (goalMinutesPerWeek > 0 && weekMinutes >= goalMinutesPerWeek) {
+              haptics.play();
             }
-
-            final dayOk = minutesPerDay > 0 && daySpent >= minutesPerDay;
-            final weekMinutesOk =
-                minutesPerWeek > 0 && weekSpentMinutes >= minutesPerWeek;
-            final weekDaysOk =
-                daysPerWeek > 0 && activeDays >= daysPerWeek;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Objectifs',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                if (minutesPerDay > 0)
-                  row('Jour',
-                      '${(daySpent / 60).toStringAsFixed(1)} / ${(minutesPerDay / 60).toStringAsFixed(1)} h',
-                      dayOk),
-                if (minutesPerWeek > 0)
-                  row('Semaine (heures)',
-                      '${(weekSpentMinutes / 60).toStringAsFixed(1)} / ${(minutesPerWeek / 60).toStringAsFixed(1)} h',
-                      weekMinutesOk),
-                if (daysPerWeek > 0)
-                  row('Semaine (jours actifs)',
-                      '$activeDays / $daysPerWeek', weekDaysOk),
+                Row(
+                  children: [
+                    const Icon(Icons.flag_outlined),
+                    const SizedBox(width: 8),
+                    Text('Objectifs', style: Theme.of(context).textTheme.titleMedium),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (goalMinutesPerDay > 0) ...[
+                  _ProgressLine(
+                    label: 'Aujourd\'hui',
+                    valueMinutes: minutesToday,
+                    goalMinutes: goalMinutesPerDay,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (goalMinutesPerWeek > 0) ...[
+                  _ProgressLine(
+                    label: 'Cette semaine',
+                    valueMinutes: weekMinutes,
+                    goalMinutes: goalMinutesPerWeek,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                if (goal == null)
+                  Text('Aucun objectif défini pour cette activité.', style: Theme.of(context).textTheme.bodySmall),
               ],
             );
           },
-          loading: () => const SizedBox(
-            height: 56,
-            child: Center(child: CircularProgressIndicator()),
-          ),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Text('Erreur objectifs: $e'),
         ),
       ),
@@ -111,10 +96,57 @@ class GoalProgressCard extends ConsumerWidget {
   }
 }
 
-/// Petit helper sur GoalDao pour récupérer 1 goal (ou null)
-extension on GoalDao {
-  /// Stream -> value unique (ou null) pour une activité
-  AsyncValue<Goal?> selectSingle(int activityId) {
-    return watchByActivityId(activityId).map((list) => list.isEmpty ? null : list.first);
+int _extractMinutesFromTotals(dynamic totals) {
+  if (totals is Map) {
+    int sum = 0;
+    for (final v in totals.values) {
+      if (v is Duration) sum += v.inMinutes;
+      else if (v is int) sum += v;
+    }
+    return sum;
+  }
+  if (totals is List) {
+    int sum = 0;
+    for (final t in totals) {
+      try {
+        final dyn = t as dynamic;
+        if (dyn.minutes is int) sum += dyn.minutes as int;
+        else if (dyn.duration is Duration) sum += (dyn.duration as Duration).inMinutes;
+        else if (dyn['minutes'] is int) sum += dyn['minutes'] as int;
+        else if (dyn['duration'] is Duration) sum += (dyn['duration'] as Duration).inMinutes;
+      } catch (_) {}
+    }
+    return sum;
+  }
+  return 0;
+}
+
+class _ProgressLine extends StatelessWidget {
+  final String label;
+  final int valueMinutes;
+  final int goalMinutes;
+
+  const _ProgressLine({required this.label, required this.valueMinutes, required this.goalMinutes});
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = goalMinutes <= 0 ? 0.0 : (valueMinutes / goalMinutes).clamp(0.0, 1.0);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(label),
+            const Spacer(),
+            Text('${(valueMinutes / 60).toStringAsFixed(1)}h / ${(goalMinutes / 60).toStringAsFixed(1)}h'),
+          ],
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(value: percent, minHeight: 8),
+        ),
+      ],
+    );
   }
 }
