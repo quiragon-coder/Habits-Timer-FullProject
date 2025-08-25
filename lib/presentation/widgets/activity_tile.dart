@@ -1,87 +1,66 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
-import '../../application/providers/providers.dart';
-import '../../application/providers/stats_provider.dart' as stats;
 import '../pages/activity_detail_page.dart';
 import '../pages/activity_edit_page.dart';
-import '../../infrastructure/db/activity_dao_extras.dart';
+import 'package:intl/intl.dart';
+import '../utils/haptics.dart';
 
-class ActivityTile extends ConsumerWidget {
+class ActivityTile extends StatelessWidget {
   final Activity activity;
-  const ActivityTile({super.key, required this.activity});
+  final VoidCallback? onChanged; // call after edit
+  const ActivityTile({super.key, required this.activity, this.onChanged});
 
-  String _mmss(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60);
-    final s = d.inSeconds.remainder(60);
-    if (h > 0) {
-      return '${h.toString().padLeft(2,'0')}:${m.toString().padLeft(2,'0')}:${s.toString().padLeft(2,'0')}';
-    }
-    return '${m.toString().padLeft(2,'0')}:${s.toString().padLeft(2,'0')}';
-  }
+  String _date(DateTime d) => DateFormat.yMMMd().format(d);
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final totals = ref.watch(stats.totalsProvider(activity.id));
-    final dao = ref.read(activityDaoProvider);
-
+  Widget build(BuildContext context) {
+    final created = DateTime.fromMillisecondsSinceEpoch(activity.createdAtUtc * 1000, isUtc: true).toLocal();
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListTile(
-        leading: CircleAvatar(
-          radius: 22,
-          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(.1),
-          child: Text(activity.emoji ?? '⏱️', style: const TextStyle(fontSize: 20)),
-        ),
-        title: Text(activity.name),
-        subtitle: totals.when(
-          data: (m) => Text("Aujourd'hui: ${_mmss(m['today']!)}"),
-          loading: () => const Text('Calcul...'),
-          error: (e, _) => Text('Erreur: $e'),
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) async {
-            if (value == 'open') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ActivityDetailPage(activityId: activity.id)),
-              );
-            } else if (value == 'edit') {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => ActivityEditPage(activityId: activity.id)),
-              );
-            } else if (value == 'delete') {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Supprimer activité ?'),
-                  content: const Text('Toutes les sessions seront aussi supprimées.'),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      child: const Text('Supprimer'),
-                    ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Haptics.tap();
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ActivityDetailPage(activityId: activity.id),
+          ));
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44, height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(activity.emoji ?? '🕒', style: const TextStyle(fontSize: 22)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(activity.name, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text('Créée le ${_date(created)}', style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),
-              );
-              if (confirm == true) {
-                await dao.deleteActivityCascade(activity.id);
-              }
-            }
-          },
-          itemBuilder: (ctx) => [
-            const PopupMenuItem(value: 'open', child: Text('Ouvrir')),
-            const PopupMenuItem(value: 'edit', child: Text('Modifier')),
-            const PopupMenuItem(value: 'delete', child: Text('Supprimer')),
-          ],
-        ),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => ActivityDetailPage(activityId: activity.id)),
+              ),
+              IconButton(
+                tooltip: 'Éditer',
+                onPressed: () async {
+                  Haptics.tap();
+                  await Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ActivityEditPage(activityId: activity.id),
+                  ));
+                  onChanged?.call();
+                },
+                icon: const Icon(Icons.edit_outlined),
+              ),
+            ],
+          ),
         ),
       ),
     );

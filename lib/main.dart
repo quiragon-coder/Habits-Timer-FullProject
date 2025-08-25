@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'presentation/theme.dart';
-import 'presentation/pages/activities_home_page.dart';
+import '../presentation/pages/app_scaffold.dart';
 
 void main() {
-  runApp(const ProviderScope(child: HabitsTimerApp()));
+  runApp(const HabitsTimerApp());
 }
 
 class HabitsTimerApp extends StatelessWidget {
@@ -14,9 +12,11 @@ class HabitsTimerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Habits Timer',
-      theme: appTheme,
-      home: const ActivitiesHomePage(),
-      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        useMaterial3: true,
+      ),
+      home: const AppScaffold(),
     );
   }
 }
