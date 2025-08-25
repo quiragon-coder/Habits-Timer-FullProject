@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 ThemeData buildAppTheme(Brightness brightness) {
   final isDark = brightness == Brightness.dark;
+
   final base = ThemeData(
     useMaterial3: true,
     brightness: brightness,
@@ -11,15 +12,18 @@ ThemeData buildAppTheme(Brightness brightness) {
   final cs = base.colorScheme;
 
   return base.copyWith(
-    scaffoldBackgroundColor: isDark ? const Color(0xFF0F0F12) : const Color(0xFFF8F9FB),
+    scaffoldBackgroundColor:
+    isDark ? const Color(0xFF0F0F12) : const Color(0xFFF8F9FB),
     appBarTheme: AppBarTheme(
       elevation: 0,
       backgroundColor: Colors.transparent,
       foregroundColor: cs.onSurface,
       centerTitle: false,
-      titleTextStyle: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      titleTextStyle:
+      base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
     ),
-    cardTheme: const CardTheme( // CardThemeData in M3 is CardTheme
+    // ✅ Your Flutter version expects CardThemeData here
+    cardTheme: const CardThemeData(
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(16)),
@@ -31,10 +35,13 @@ ThemeData buildAppTheme(Brightness brightness) {
       dense: false,
     ),
     textTheme: base.textTheme.copyWith(
-      displayLarge: base.textTheme.displayLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2),
-      titleLarge: base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+      displayLarge: base.textTheme.displayLarge
+          ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 1.2),
+      titleLarge:
+      base.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
       bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.25),
-      labelLarge: base.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      labelLarge:
+      base.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,

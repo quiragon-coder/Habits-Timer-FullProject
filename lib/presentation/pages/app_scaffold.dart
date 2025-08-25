@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+
 import 'activities_home_page.dart';
 import 'heatmap_overview_page.dart';
 import 'settings_page.dart';
 
+/// Scaffold principal avec bottom navigation.
 class AppScaffold extends StatefulWidget {
   const AppScaffold({super.key});
 
@@ -13,16 +15,14 @@ class AppScaffold extends StatefulWidget {
 class _AppScaffoldState extends State<AppScaffold> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = const [
-    ActivitiesHomePage(),
-    HeatmapOverviewPage(),
-    SettingsPage(),
+  final _pages = const [
+    ActivitiesHomePage(),       // Accueil timers
+    HeatmapOverviewPage(),      // Heatmap globale
+    SettingsPage(),             // Réglages
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -33,18 +33,9 @@ class _AppScaffoldState extends State<AppScaffold> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: _onItemTapped,
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            label: 'Timers',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.grid_on_outlined),
-            label: 'Heatmap',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Réglages',
-          ),
+          NavigationDestination(icon: Icon(Icons.timer_outlined), label: 'Timers'),
+          NavigationDestination(icon: Icon(Icons.grid_on_outlined), label: 'Heatmap'),
+          NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Réglages'),
         ],
       ),
     );

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+
 import '../presentation/theme.dart';
-import '../presentation/pages/activities_home_page.dart';
+import '../presentation/pages/app_scaffold.dart';
 
 void main() {
+  // ⬇️ Riverpod doit entourer toute l'app
   runApp(const ProviderScope(child: HabitsTimerApp()));
 }
 
@@ -14,9 +16,10 @@ class HabitsTimerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Habits Timer',
-      theme: appTheme,
-      home: const ActivitiesHomePage(), // Home list (no activityId needed)
-      debugShowCheckedModeBanner: false,
+      theme: buildAppTheme(Brightness.light),
+      darkTheme: buildAppTheme(Brightness.dark),
+      themeMode: ThemeMode.system,
+      home: const AppScaffold(),
     );
   }
 }
