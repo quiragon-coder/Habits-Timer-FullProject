@@ -1,81 +1,85 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import '../../application/services/color_palette.dart';
+import 'package:fl_chart/fl_chart.dart';
+
+class TrendsMeta {
+  final List<String> labels;
+  const TrendsMeta(this.labels);
+}
 
 class TrendsChart extends StatelessWidget {
-  final ActivityPalette? palette;
-  final List<double> y;           // values, in hours
-  final List<String> labels;      // x labels
-  final String title;
+  // New API
+  final List<FlSpot>? series;
+  final TrendsMeta? meta;
 
-  const TrendsChart({super.key, required this.y, required this.labels, required this.title, this.palette});
+  // Back-compat (older API used in some pages)
+  final List<double>? y;
+  final List<String>? labels;
+  final String? title;
+
+  const TrendsChart({
+    super.key,
+    this.series,
+    this.meta,
+    this.y,
+    this.labels,
+    this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final p = palette ?? buildPaletteFromInt(null, fallback: Theme.of(context).colorScheme.primary);
-    final lineColor = p.main;
-    final fillColor = p.fill(0.18);
-    final spots = <FlSpot>[
-      for (int i = 0; i < y.length; i++) FlSpot(i.toDouble(), y[i]),
-    ];
+    // Normalize inputs
+    final s = series ?? _spotsFromY(y);
+    final m = meta ?? TrendsMeta(labels ?? List.generate(s.length, (i) => i.toString()));
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 220,
-              child: LineChart(
-                LineChartData(
-                  minX: 0,
-                  maxX: (spots.isEmpty ? 0 : spots.last.x),
-                  lineBarsData: [
-                    LineChartBarData(
-                      spots: spots,
-                      isCurved: true,
-                      dotData: const FlDotData(show: false),
-                      belowBarData: BarAreaData(show: true, color: fillColor),
-                    )
-                  ],
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 28,
-                        interval: (labels.length / 4).ceilToDouble().clamp(1, 4),
-                        getTitlesWidget: (value, meta) {
-                          final i = value.toInt();
-                          if (i < 0 || i >= labels.length) return const SizedBox.shrink();
-                          return SideTitleWidget(
-                            axisSide: meta.axisSide,
-                            child: Text(labels[i], style: const TextStyle(fontSize: 10)),
-                          );
-                        },
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 40,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) => Text('${value.toStringAsFixed(0)}h', style: const TextStyle(fontSize: 10)),
-                      ),
-                    ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  ),
-                  gridData: const FlGridData(show: true),
-                  borderData: FlBorderData(show: true),
-                ),
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (title != null) Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: Text(title!, style: Theme.of(context).textTheme.titleMedium),
         ),
-      ),
+        SizedBox(
+          height: 220,
+          child: LineChart(
+            LineChartData(
+              titlesData: FlTitlesData(
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 28,
+                    interval: 1,
+                    getTitlesWidget: (value, _) {
+                      final i = value.toInt();
+                      final txt = (i >= 0 && i < m.labels.length) ? m.labels[i] : '';
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(txt, style: const TextStyle(fontSize: 10)),
+                      );
+                    },
+                  ),
+                ),
+                leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 30)),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              gridData: const FlGridData(show: true),
+              borderData: FlBorderData(show: true, border: Border.all(color: Theme.of(context).dividerColor)),
+              lineBarsData: [
+                LineChartBarData(spots: s, isCurved: true, dotData: const FlDotData(show: false)),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
+  }
+
+  List<FlSpot> _spotsFromY(List<double>? y) {
+    if (y == null) return const <FlSpot>[];
+    final out = <FlSpot>[];
+    for (var i = 0; i < y.length; i++) {
+      out.add(FlSpot(i.toDouble(), y[i]));
+    }
+    return out;
   }
 }

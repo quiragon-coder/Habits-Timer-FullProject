@@ -1,25 +1,21 @@
+import 'package:drift/drift.dart';
 import 'database.dart';
 
 extension GoalDaoExtras on GoalDao {
-  AppDatabase get _db {
-    final self = this as dynamic;
-    final maybeDb = (self.db ?? self.attachedDatabase);
-    return maybeDb as AppDatabase;
-  }
+  // Legacy alias kept for compatibility with existing code
+  Stream<List<Goal>> watchByActivity(int activityId) => watchByActivityId(activityId);
 
-  /// Stream all goals for a given activity id.
   Stream<List<Goal>> watchByActivityId(int activityId) {
-    return (_db.select(_db.goals)..where((g) => g.activityId.equals(activityId))).watch();
+    final d = attachedDatabase;
+    return (d.select(d.goals)..where((g) => g.activityId.equals(activityId))).watch();
   }
 
-  /// Backward-compatible alias: returns the FIRST goal (or null) as a stream.
-  Stream<Goal?> watchByActivity(int activityId) {
-    return watchByActivityId(activityId).map((list) => list.isEmpty ? null : list.first);
-  }
+  Stream<Goal?> watchSingleByActivityId(int activityId) =>
+      watchByActivityId(activityId).map((rows) => rows.isEmpty ? null : rows.first);
 
-  /// Get a single goal (first or null) for an activity id.
-  Future<Goal?> findByActivityId(int activityId) async {
-    final list = await (_db.select(_db.goals)..where((g) => g.activityId.equals(activityId))).get();
-    return list.isEmpty ? null : list.first;
+  Future<Goal?> getSingleByActivityId(int activityId) async {
+    final d = attachedDatabase;
+    final rows = await (d.select(d.goals)..where((g) => g.activityId.equals(activityId))).get();
+    return rows.isEmpty ? null : rows.first;
   }
 }

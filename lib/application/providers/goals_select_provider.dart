@@ -1,11 +1,10 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
-import '../../infrastructure/db/goal_dao_extras.dart'; // <- bring extension methods into scope
-import 'unified_providers.dart' show goalDaoProvider;
+import '../../infrastructure/db/goal_dao_extras.dart';
+import 'unified_providers.dart' show databaseProvider;
 
-/// StreamProvider qui renvoie le premier Goal d'une activité (ou null s'il n'y en a pas).
-final goalSingleProvider = StreamProvider.family<Goal?, int>((ref, activityId) {
-  final dao = ref.watch(goalDaoProvider);
-  // Uses GoalDaoExtras.watchByActivity (returns Stream<Goal?>)
-  return dao.watchByActivity(activityId);
+/// Stream du goal principal d'une activité (ou null).
+final goalByActivitySelectProvider = StreamProvider.family<Goal?, int>((ref, activityId) {
+  final db = ref.watch(databaseProvider);
+  return db.goalDao.watchByActivity(activityId).map((rows) => rows.isEmpty ? null : rows.first);
 });

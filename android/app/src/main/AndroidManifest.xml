@@ -1,20 +1,22 @@
-<!-- AndroidManifest.xml for Habits Timer (notifications-ready), package: com.habitstimer.habits_timer -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.habitstimer.habits_timer">
 
-    <!-- Flutter needs internet for debugging and many plugins -->
-    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Optional if you schedule work/notifications across reboots -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
-    <!-- Android 13+ runtime notifications permission -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
     <application
-        android:name="${applicationName}"
         android:label="Habits Timer"
+        android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true">
+        android:allowBackup="true"
+        android:supportsRtl="true">
 
+        <!-- Force Android embedding v2 -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+
+        <!-- Launch (FlutterActivity) -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,8 +32,10 @@
             </intent-filter>
         </activity>
 
+        <!-- Theme that is applied after the first Flutter frame is rendered. -->
         <meta-data
             android:name="io.flutter.embedding.android.NormalTheme"
             android:resource="@style/NormalTheme" />
+
     </application>
 </manifest>
