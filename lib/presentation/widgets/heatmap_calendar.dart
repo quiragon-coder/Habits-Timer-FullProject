@@ -87,7 +87,7 @@ class HeatmapCalendar extends ConsumerWidget {
                                 tooltip: () {
                                   final day = start.add(Duration(days: w * 7 + d));
                                   final m = map[DateTime(day.year, day.month, day.day)] ?? 0;
-                                  return '${day.year}-${day.month.toString().padLeft(2,'0')}-${day.day.toString().padLeft(2,'0')}  •  ${m} min';
+                                  return '${day.year}-${day.month.toString().padLeft(2,'0')}-${day.day.toString().padLeft(2,'0')}  •  $m min';
                                 }(),
                               ),
                             ),

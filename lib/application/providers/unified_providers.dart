@@ -1,13 +1,9 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
-import '../../infrastructure/db/activity_dao_extras.dart';
 import '../../infrastructure/db/session_dao_extras.dart';
 import '../../infrastructure/db/goal_dao_extras.dart';
 import 'providers.dart';
-import 'stats_provider.dart';
-import 'goals_provider.dart';
-import 'heatmap_provider.dart';
 
 // Re-export aliases for a single import point.
 // (Directives must come before any declarations.)

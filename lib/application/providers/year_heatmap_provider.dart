@@ -22,7 +22,7 @@ final dailyTotalsWithPausesProvider = FutureProvider.family<
   final sessions = await (db.select(db.sessions)
         ..where((s) => s.activityId.equals(args.activityId) &
             s.startUtc.isSmallerThanValue(endSec) &
-            (s.endUtc.isNull() | s.endUtc!.isBiggerOrEqualValue(startSec)))
+            (s.endUtc.isNull() | s.endUtc.isBiggerOrEqualValue(startSec)))
         ..orderBy([(t) => drift.OrderingTerm.asc(t.startUtc)]))
       .get();
 

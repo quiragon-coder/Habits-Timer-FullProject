@@ -70,7 +70,7 @@ class _GoalCardState extends State<GoalCard> with SingleTickerProviderStateMixin
                     if (weekTargetMin > 0)
                       Chip(
                         label: Text('${(pr.clamp(0,1)*100).round()}%'),
-                        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(.1),
+                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: .1),
                       ),
                   ],
                 ),
@@ -105,7 +105,7 @@ class _ConfettiPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..style = PaintingStyle.fill;
     for (int i = 0; i < 80; i++) {
-      paint.color = Colors.primaries[i % Colors.primaries.length].withOpacity((1 - t).clamp(0, 1));
+      paint.color = Colors.primaries[i % Colors.primaries.length].withValues(alpha: (1 - t).clamp(0, 1));
       final dx = size.width * (i / 80) + (i.isEven ? 1 : -1) * 30 * t;
       final dy = size.height * .1 + t * (size.height * .8) * (i % 7) / 7;
       canvas.drawCircle(Offset(dx, dy), 2 + (i % 3) * 1.5, paint);

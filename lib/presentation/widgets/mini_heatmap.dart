@@ -89,7 +89,7 @@ class MiniHeatmap extends ConsumerWidget {
                                       builder: (_) => AlertDialog(
                                         title: const Text('Détail du jour'),
                                         content: Text(
-                                          "${day.year}-${two(day.month)}-${two(day.day)}\n${m} min",
+                                          "${day.year}-${two(day.month)}-${two(day.day)}\n$m min",
                                         ),
                                         actions: [
                                           TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
@@ -104,7 +104,7 @@ class MiniHeatmap extends ConsumerWidget {
                                   onLongPress: () async {
                                     final day = start.add(Duration(days: w * 7 + d));
                                     final m = map[DateTime(day.year, day.month, day.day)] ?? 0;
-                                    final text = "${day.year}-${two(day.month)}-${two(day.day)} • ${m} min";
+                                    final text = "${day.year}-${two(day.month)}-${two(day.day)} • $m min";
                                     await Clipboard.setData(ClipboardData(text: text));
                                     if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(

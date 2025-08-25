@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../application/providers/day_detail_provider.dart';
 import 'session_edit_page.dart';
 
 class DayDetailPage extends StatelessWidget {

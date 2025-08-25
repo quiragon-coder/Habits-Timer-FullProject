@@ -45,7 +45,7 @@ Future<(List<Session>, Map<int, List<Pause>>)> _sessionsWithPausesBetween(
   final sessions = await (db.select(db.sessions)
         ..where((s) => s.activityId.equals(activityId))
         ..where((s) => s.startUtc.isSmallerThanValue(toTs))
-        ..where((s) => s.endUtc.isNull() | s.endUtc!.isBiggerOrEqualValue(fromTs)))
+        ..where((s) => s.endUtc.isNull() | s.endUtc.isBiggerOrEqualValue(fromTs)))
       .get();
 
   if (sessions.isEmpty) return (sessions, <int, List<Pause>>{});

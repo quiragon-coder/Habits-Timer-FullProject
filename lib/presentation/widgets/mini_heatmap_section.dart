@@ -1,11 +1,11 @@
 // Mini heatmap section (loading polished, fixed height, no floating tiny indicator).
-import 'dart:math';
 import 'package:flutter/material.dart';
+import '../widgets/heatmap_colors.dart';
+import '../../application/providers/palette_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 
 import '../../application/providers/unified_providers.dart';
-import '../../infrastructure/db/database.dart';
 import '../pages/heatmap_overview_page.dart';
 
 class DayValue {
@@ -55,6 +55,9 @@ class MiniHeatmapSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final pal = ref.watch(globalPaletteProvider);
+    final scale = heatmapScale(pal);
+
     final async = ref.watch(_dailyTotalsProvider(activityId));
     return async.when(
       data: (list) {
@@ -68,12 +71,12 @@ class MiniHeatmapSection extends ConsumerWidget {
         final q25 = q(0.25), q50 = q(0.5), q75 = q(0.75), qMax = values.isEmpty ? 0 : values.last;
 
         Color cellColor(double v, Color base) {
-          if (v <= 0) return base.withOpacity(.08);
-          if (qMax <= 0) return base.withOpacity(.12);
-          if (v <= q25) return base.withOpacity(.25);
-          if (v <= q50) return base.withOpacity(.45);
-          if (v <= q75) return base.withOpacity(.65);
-          return base.withOpacity(.9);
+          if (v <= 0) return base.withValues(alpha: .08);
+          if (qMax <= 0) return base.withValues(alpha: .12);
+          if (v <= q25) return base.withValues(alpha: .25);
+          if (v <= q50) return base.withValues(alpha: .45);
+          if (v <= q75) return base.withValues(alpha: .65);
+          return base.withValues(alpha: .9);
         }
         final base = Theme.of(context).colorScheme.primary;
 

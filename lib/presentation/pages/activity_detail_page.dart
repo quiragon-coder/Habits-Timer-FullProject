@@ -6,9 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
 import '../../application/providers/unified_providers.dart';
 import '../../application/providers/stats_provider.dart' as stats;
-import '../../application/providers/heatmap_provider.dart';
 import '../../application/providers/history_provider.dart' as hist;
-import '../../application/providers/goals_provider.dart';
 import '../../application/services/time_utils.dart';
 import '../../application/services/timer_service.dart'; // TimerStatus
 import '../widgets/timer_controls.dart';
@@ -17,6 +15,7 @@ import '../widgets/goal_card.dart';
 import '../widgets/mini_heatmap_section.dart';
 import '../widgets/period_selector.dart';
 import '../widgets/period_charts.dart';
+import './stats_trends_page.dart';
 
 class ActivityDetailPage extends HookConsumerWidget {
   final int activityId;
@@ -69,7 +68,22 @@ class ActivityDetailPage extends HookConsumerWidget {
         : activity.name;
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+  actions: [
+    IconButton(
+      tooltip: 'Tendances',
+      icon: const Icon(Icons.show_chart),
+      onPressed: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => StatsTrendsPage(
+            activityId: activityId,
+            activityName: activity.name,
+          ),
+        ));
+      },
+    ),
+  ],
+title: Text(title)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

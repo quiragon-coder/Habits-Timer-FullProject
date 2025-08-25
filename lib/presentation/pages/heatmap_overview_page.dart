@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../widgets/heatmap_colors.dart';
+import '../../application/providers/palette_provider.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:drift/drift.dart' as drift;
 
@@ -34,6 +36,9 @@ class _HeatmapOverviewPageState extends ConsumerState<HeatmapOverviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pal = ref.watch(globalPaletteProvider);
+    final scale = heatmapScale(pal);
+
     final today = DateTime.now();
     final w = _window(today);
 
@@ -90,12 +95,12 @@ class _HeatmapOverviewPageState extends ConsumerState<HeatmapOverviewPage> {
             final q25 = q(.25), q50 = q(.5), q75 = q(.75), qMax = values.isEmpty ? 0 : values.last;
 
             Color shade(double v, Color base) {
-              if (v <= 0) return base.withOpacity(.08);
-              if (qMax <= 0) return base.withOpacity(.12);
-              if (v <= q25) return base.withOpacity(.25);
-              if (v <= q50) return base.withOpacity(.45);
-              if (v <= q75) return base.withOpacity(.65);
-              return base.withOpacity(.9);
+              if (v <= 0) return base.withValues(alpha: .08);
+              if (qMax <= 0) return base.withValues(alpha: .12);
+              if (v <= q25) return base.withValues(alpha: .25);
+              if (v <= q50) return base.withValues(alpha: .45);
+              if (v <= q75) return base.withValues(alpha: .65);
+              return base.withValues(alpha: .9);
             }
 
             final base = Theme.of(context).colorScheme.primary;
@@ -224,7 +229,7 @@ final dailyTotalsProvider = FutureProvider.family<
   final q = db.select(db.sessions)
     ..where((s) =>
     s.startUtc.isSmallerThanValue(endSec) &
-    (s.endUtc.isNull() | s.endUtc!.isBiggerOrEqualValue(startSec)));
+    (s.endUtc.isNull() | s.endUtc.isBiggerOrEqualValue(startSec)));
   if (args.activityId != null) {
     q.where((s) => s.activityId.equals(args.activityId!));
   }

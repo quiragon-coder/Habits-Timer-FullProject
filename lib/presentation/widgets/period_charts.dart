@@ -117,7 +117,9 @@ class PeriodChart extends ConsumerWidget {
         // Convert any supported shape to Duration
         final durations = list.map(_toDuration).toList();
         // pad/truncate to 7
-        while (durations.length < 7) durations.add(Duration.zero);
+        while (durations.length < 7) {
+          durations.add(Duration.zero);
+        }
         if (durations.length > 7) durations.removeRange(7, durations.length);
         return WeekBars(perDay: durations);
       },

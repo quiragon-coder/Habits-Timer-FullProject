@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../application/providers/providers.dart';
-import '../../application/services/timer_service.dart'; // ✅ import TimerStatus
+import '../../application/services/timer_service.dart';
 
 class HomePage extends ConsumerWidget {
   final int activityId;
@@ -11,25 +11,20 @@ class HomePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final timerState = ref.watch(activeTimerProvider(activityId));
     final timer = ref.read(activeTimerProvider(activityId).notifier);
-    final isRunning = timerState?.status == TimerStatus.running;
+
+    final isRunning = timerState.status == TimerStatus.running;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Home')),
+      appBar: AppBar(title: const Text('Timer')),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Timer: ${timerState?.elapsed ?? Duration.zero}'),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(onPressed: () => timer.play(), child: const Text("Play")),
-                const SizedBox(width: 8),
-                ElevatedButton(onPressed: () => timer.pause(), child: const Text("Pause")),
-                const SizedBox(width: 8),
-                ElevatedButton(onPressed: () => timer.stop(), child: const Text("Stop")),
-              ],
-            ),
+            ElevatedButton(onPressed: isRunning ? null : () => timer.play(), child: const Text('Play')),
+            const SizedBox(width: 8),
+            ElevatedButton(onPressed: isRunning ? () => timer.pause() : null, child: const Text('Pause')),
+            const SizedBox(width: 8),
+            ElevatedButton(onPressed: () => timer.stop(), child: const Text('Stop')),
           ],
         ),
       ),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../pages/activities_home_page.dart';
 import '../pages/heatmap_overview_page.dart';

@@ -83,7 +83,7 @@ class AppDatabase extends _$AppDatabase {
 
 @DriftAccessor(tables: [Activities])
 class ActivityDao extends DatabaseAccessor<AppDatabase> with _$ActivityDaoMixin {
-  ActivityDao(AppDatabase db) : super(db);
+  ActivityDao(super.db);
 
   Future<int> insertActivity(ActivitiesCompanion data) => into(activities).insert(data);
   Future<List<Activity>> getAll() => select(activities).get();
@@ -96,7 +96,7 @@ class ActivityDao extends DatabaseAccessor<AppDatabase> with _$ActivityDaoMixin 
 
 @DriftAccessor(tables: [Sessions, Pauses])
 class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
-  SessionDao(AppDatabase db) : super(db);
+  SessionDao(super.db);
 
   Future<int> startSession({required int activityId, required int startUtc}) {
     return into(sessions).insert(SessionsCompanion.insert(
@@ -119,7 +119,7 @@ class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
 
 @DriftAccessor(tables: [Pauses])
 class PauseDao extends DatabaseAccessor<AppDatabase> with _$PauseDaoMixin {
-  PauseDao(AppDatabase db) : super(db);
+  PauseDao(super.db);
 
   Future<int> startPause({required int sessionId, required int startUtc}) {
     return into(pauses).insert(PausesCompanion.insert(sessionId: sessionId, startUtc: startUtc));
@@ -144,7 +144,7 @@ class PauseDao extends DatabaseAccessor<AppDatabase> with _$PauseDaoMixin {
 
 @DriftAccessor(tables: [Goals])
 class GoalDao extends DatabaseAccessor<AppDatabase> with _$GoalDaoMixin {
-  GoalDao(AppDatabase db) : super(db);
+  GoalDao(super.db);
 
   Future<Goal?> forActivity(int activityId) async {
     return (select(goals)..where((g) => g.activityId.equals(activityId))).getSingleOrNull();

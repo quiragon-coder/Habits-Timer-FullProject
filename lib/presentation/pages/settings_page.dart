@@ -9,39 +9,35 @@ class SettingsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final ctrl = ref.read(settingsProvider.notifier);
+    final controller = ref.read(settingsProvider.notifier);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Text('Apparence', style: TextStyle(fontWeight: FontWeight.w600)),
+          Text('Thème', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          RadioListTile<ThemeMode>(
-            title: const Text('Système'),
-            value: ThemeMode.system,
-            groupValue: settings.themeMode,
-            onChanged: (m) => ctrl.setThemeMode(m ?? ThemeMode.system),
+          SegmentedButton<ThemeMode>(
+            segments: const [
+              ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.settings_suggest), label: Text('Système')),
+              ButtonSegment(value: ThemeMode.light,  icon: Icon(Icons.light_mode),       label: Text('Clair')),
+              ButtonSegment(value: ThemeMode.dark,   icon: Icon(Icons.dark_mode),        label: Text('Sombre')),
+            ],
+            selected: {settings.themeMode},
+            onSelectionChanged: (s) {
+              if (s.isNotEmpty) {
+                controller.setThemeMode(s.first);
+              }
+            },
+            showSelectedIcon: false,
+            style: const ButtonStyle(visualDensity: VisualDensity.compact),
           ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Clair'),
-            value: ThemeMode.light,
-            groupValue: settings.themeMode,
-            onChanged: (m) => ctrl.setThemeMode(m ?? ThemeMode.light),
-          ),
-          RadioListTile<ThemeMode>(
-            title: const Text('Sombre'),
-            value: ThemeMode.dark,
-            groupValue: settings.themeMode,
-            onChanged: (m) => ctrl.setThemeMode(m ?? ThemeMode.dark),
-          ),
-          const Divider(),
+          const SizedBox(height: 24),
           SwitchListTile(
             title: const Text('Retour haptique'),
             value: settings.hapticsEnabled,
-            onChanged: (v) => ctrl.setHaptics(v),
-            subtitle: const Text('Vibrations sur Play / Pause / Stop'),
+            onChanged: (v) => controller.setHaptics(v),
           ),
         ],
       ),
