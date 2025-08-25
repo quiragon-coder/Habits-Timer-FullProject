@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' as drift;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
 import '../../infrastructure/db/activity_dao_extras.dart';
@@ -9,15 +10,21 @@ import 'goals_provider.dart';
 import 'heatmap_provider.dart';
 
 // Re-export aliases for a single import point.
-export 'providers.dart' show databaseProvider, activityDaoProvider, sessionDaoProvider, pauseDaoProvider, goalDaoProvider, activeTimerProvider;
+// (Directives must come before any declarations.)
+export 'providers.dart' show databaseProvider, activityDaoProvider, sessionDaoProvider, pauseDaoProvider, activeTimerProvider;
 export 'stats_provider.dart' show totalsProvider, last7DaysTotalsProvider, recentHistoryProvider;
 export 'goals_provider.dart' show goalProgressProvider;
 export 'heatmap_provider.dart' show last365HeatmapProvider, last8WeeksHeatmapProvider;
 
+// GoalDao provider (some projects don't expose it in providers.dart)
+final goalDaoProvider = Provider<GoalDao>((ref) => ref.watch(databaseProvider).goalDao);
+
 // Derived simple streams
 final activitiesStreamProvider = StreamProvider<List<Activity>>((ref) {
   final db = ref.watch(databaseProvider);
-  return (db.select(db.activities)..orderBy([(t) => OrderingTerm(expression: t.id)])).watch();
+  return (db.select(db.activities)
+        ..orderBy([(t) => drift.OrderingTerm(expression: t.id)]))
+      .watch();
 });
 
 final sessionsStreamProvider = StreamProvider.family<List<Session>, int>((ref, activityId) {

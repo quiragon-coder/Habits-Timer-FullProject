@@ -1,41 +1,39 @@
-// Helper / extras for ActivityDao
-// Adds watchAll() and getAll() + Riverpod providers
-
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:drift/drift.dart' as drift;
 import 'database.dart';
-import '../../application/providers/providers.dart';
 
 extension ActivityDaoExtras on ActivityDao {
-  AppDatabase _root() {
-    final dynamic self = this;
-    try {
-      final AppDatabase d = self.db as AppDatabase;
-      return d;
-    } catch (_) {}
-    try {
-      final AppDatabase d = self.attachedDatabase as AppDatabase;
-      return d;
-    } catch (_) {}
-    throw StateError('ActivityDao does not expose db/attachedDatabase');
-  }
+  AppDatabase get db => attachedDatabase;
 
   Stream<List<Activity>> watchAll() {
-    final db = _root();
-    return (db.select(db.activities)..orderBy([(t) => OrderingTerm(expression: t.id)])).watch();
+    final q = (db.select(db.activities)
+      ..orderBy([(t) => drift.OrderingTerm(expression: t.id)]));
+    return q.watch();
   }
 
   Future<List<Activity>> getAll() {
-    final db = _root();
-    return (db.select(db.activities)..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
+    final q = (db.select(db.activities)
+      ..orderBy([(t) => drift.OrderingTerm(expression: t.id)]));
+    return q.get();
+  }
+
+  Future<Activity?> findById(int id) {
+    final q = (db.select(db.activities)..where((a) => a.id.equals(id))..limit(1));
+    return q.getSingleOrNull();
+  }
+
+  Future<int> updateActivityData(ActivitiesCompanion companion) {
+    return (db.update(db.activities)..where((a) => a.id.equals(companion.id.value))).write(companion);
+  }
+
+  Future<void> deleteActivityCascade(int activityId) async {
+    final sess = await (db.select(db.sessions)..where((s) => s.activityId.equals(activityId))).get();
+    for (final s in sess) {
+      await (db.delete(db.pauses)..where((p) => p.sessionId.equals(s.id))).go();
+    }
+    await (db.delete(db.sessions)..where((s) => s.activityId.equals(activityId))).go();
+    try {
+      await (db.delete(db.goals)..where((g) => g.activityId.equals(activityId))).go();
+    } catch (_) {}
+    await (db.delete(db.activities)..where((a) => a.id.equals(activityId))).go();
   }
 }
-
-final activitiesStreamProvider = StreamProvider<List<Activity>>((ref) {
-  final db = ref.watch(databaseProvider);
-  return (db.select(db.activities)..orderBy([(t) => OrderingTerm(expression: t.id)])).watch();
-});
-
-final activitiesFutureProvider = FutureProvider<List<Activity>>((ref) async {
-  final db = ref.watch(databaseProvider);
-  return (db.select(db.activities)..orderBy([(t) => OrderingTerm(expression: t.id)])).get();
-});

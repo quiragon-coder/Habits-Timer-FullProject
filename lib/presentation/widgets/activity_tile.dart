@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
 import '../../application/providers/providers.dart';
+import '../../application/providers/stats_provider.dart' as stats;
 import '../pages/activity_detail_page.dart';
 import '../pages/activity_edit_page.dart';
 import '../../infrastructure/db/activity_dao_extras.dart';
@@ -22,7 +23,7 @@ class ActivityTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final totals = ref.watch(totalsProvider(activity.id));
+    final totals = ref.watch(stats.totalsProvider(activity.id));
     final dao = ref.read(activityDaoProvider);
 
     return Card(

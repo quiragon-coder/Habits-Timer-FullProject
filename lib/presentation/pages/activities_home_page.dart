@@ -1,85 +1,87 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../infrastructure/db/database.dart';
-import '../../infrastructure/db/activity_dao_extras.dart';
-import '../../application/providers/providers.dart';
+import '../../application/providers/unified_providers.dart';
 import 'activity_detail_page.dart';
 import 'activity_edit_page.dart';
-import 'heatmap_overview_page.dart';
 
-class ActivitiesHomePage extends ConsumerWidget {
+class ActivitiesHomePage extends HookConsumerWidget {
   const ActivitiesHomePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final dao = ref.watch(activityDaoProvider);
+    final activitiesAsync = ref.watch(activitiesStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Habits Timer'),
-        actions: [
-          IconButton(
-            tooltip: 'Heatmap',
-            icon: const Icon(Icons.grid_view_rounded),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const HeatmapOverviewPage()));
-            },
-          ),
-        ],
+        title: const Text('Mes timers'),
       ),
-      body: StreamBuilder<List<Activity>>(
-        stream: dao.watchAll(),
-        builder: (context, snapshot) {
-          final items = snapshot.data ?? const <Activity>[];
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (items.isEmpty) {
+      body: activitiesAsync.when(
+        data: (list) {
+          if (list.isEmpty) {
             return Center(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Aucune activité pour le moment.'),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityEditPage()));
+                  const Text("Aucune activité pour l'instant"),
+                  const SizedBox(height: 8),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final created = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(builder: (_) => const ActivityEditPage()),
+                      );
+                      // Optionnel: rafraîchir si besoin
                     },
                     icon: const Icon(Icons.add),
-                    label: const Text('Créer ma première activité'),
+                    label: const Text('Créer une activité'),
                   ),
                 ],
               ),
             );
           }
           return ListView.separated(
-            padding: const EdgeInsets.all(12),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 8),
+            itemCount: list.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, i) {
-              final a = items[i];
-              return Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: ListTile(
-                  leading: Text(a.emoji?.isNotEmpty == true ? a.emoji! : '🎯', style: const TextStyle(fontSize: 22)),
-                  title: Text(a.name),
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => ActivityDetailPage(activityId: a.id)));
+              final a = list[i];
+              return ListTile(
+                leading: Text(a.emoji ?? '🕒', style: const TextStyle(fontSize: 20)),
+                title: Text(a.name),
+                subtitle: Text('Créée le ${DateTime.fromMillisecondsSinceEpoch(a.createdAtUtc * 1000, isUtc: true).toLocal()}'),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ActivityDetailPage(activityId: a.id), // ✅ passe activityId requis
+                    ),
+                  );
+                },
+                trailing: IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ActivityEditPage(activityId: a.id),
+                      ),
+                    );
                   },
-                  trailing: const Icon(Icons.chevron_right),
                 ),
               );
             },
           );
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => Center(child: Text('Erreur: $e')),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const ActivityEditPage()));
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ActivityEditPage()),
+          );
         },
         icon: const Icon(Icons.add),
-        label: const Text('Nouvelle'),
+        label: const Text('Nouveau timer'),
       ),
     );
   }

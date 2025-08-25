@@ -1,6 +1,7 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../infrastructure/db/database.dart';
 import 'providers.dart';
+import 'stats_provider.dart' as stats;
 import '../services/time_utils.dart';
 
 class GoalProgress {
@@ -16,7 +17,7 @@ final goalProgressProvider = FutureProvider.family<GoalProgress, int>((ref, acti
   final db = ref.read(databaseProvider);
   final goalDao = GoalDao(db);
   final goal = await goalDao.forActivity(activityId);
-  final totals = await ref.read(totalsProvider(activityId).future);
+  final totals = await ref.read(stats.totalsProvider(activityId).future);
 
   // Days done (>= 10 min by default for MVP)
   final sessionDao = ref.read(sessionDaoProvider);
@@ -42,7 +43,7 @@ final goalProgressProvider = FutureProvider.family<GoalProgress, int>((ref, acti
   return GoalProgress(
     minutesPerWeek: goal?.minutesPerWeek ?? 0,
     daysPerWeek: goal?.daysPerWeek ?? 0,
-    doneWeek: totals['week']!,
+    doneWeek: (totals['week'] ?? Duration.zero),
     daysDone: daysDone,
   );
 });

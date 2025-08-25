@@ -1,4 +1,4 @@
-// Helper / extras for GoalDao
+// GoalDao extras
 import 'database.dart';
 
 extension GoalDaoExtras on GoalDao {
