@@ -1,35 +1,67 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
   @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  static const _kPref24h = 'pref_24h';
+  static const _kPrefHaptics = 'pref_haptics';
+
+  bool _use24h = true;
+  bool _haptics = true;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final sp = await SharedPreferences.getInstance();
+    setState(() {
+      _use24h = sp.getBool(_kPref24h) ?? true;
+      _haptics = sp.getBool(_kPrefHaptics) ?? true;
+      _loading = false;
+    });
+  }
+
+  Future<void> _save(String key, bool value) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setBool(key, value);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Réglages')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Apparence', style: Theme.of(context).textTheme.titleMedium),
+          Text('Affichage', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
                 SwitchListTile(
-                  title: const Text('Thème sombre (bientôt)'),
-                  subtitle: const Text('Suivre le système pour le moment'),
-                  value: Theme.of(context).brightness == Brightness.dark,
-                  onChanged: null, // sera branché plus tard
-                ),
-                const Divider(height: 1),
-                SwitchListTile(
                   title: const Text('Format 24 heures'),
-                  subtitle: const Text('Utiliser 24h dans les affichages'),
-                  value: true,
+                  subtitle:
+                  const Text('Applique 24h dans les affichages temporels'),
+                  value: _use24h,
                   onChanged: (v) {
-                    // TODO: persister la préférence et rafraîchir l’UI
+                    setState(() => _use24h = v);
+                    _save(_kPref24h, v);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Préférence 24h à venir')),
+                      SnackBar(content: Text('Format ${v ? "24h" : "AM/PM"} enregistré')),
                     );
                   },
                 ),
@@ -37,29 +69,21 @@ class SettingsPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text('Général', style: Theme.of(context).textTheme.titleMedium),
+          Text('Interactions', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Card(
             child: Column(
               children: [
-                ListTile(
-                  leading: const Icon(Icons.translate),
-                  title: const Text('Langue'),
-                  subtitle: const Text('Français (bientôt multilingue)'),
-                  onTap: () {
+                SwitchListTile(
+                  title: const Text('Retour haptique'),
+                  subtitle:
+                  const Text('Vibration légère lors des actions clés'),
+                  value: _haptics,
+                  onChanged: (v) {
+                    setState(() => _haptics = v);
+                    _save(_kPrefHaptics, v);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Sélecteur de langue à venir')),
-                    );
-                  },
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  leading: const Icon(Icons.backup_outlined),
-                  title: const Text('Export / Sauvegarde'),
-                  subtitle: const Text('CSV / JSON (à venir)'),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Export à venir')),
+                      SnackBar(content: Text('Haptique ${v ? "activé" : "désactivé"}')),
                     );
                   },
                 ),
@@ -68,10 +92,8 @@ class SettingsPage extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Center(
-            child: Text(
-              'Habits Timer — v0.1',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+            child: Text('Habits Timer — v0.1',
+                style: Theme.of(context).textTheme.bodySmall),
           ),
         ],
       ),

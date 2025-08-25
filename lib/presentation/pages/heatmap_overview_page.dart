@@ -7,56 +7,89 @@ import '../../application/providers/unified_providers.dart';
 import '../../application/services/time_utils.dart';
 import 'day_detail_page.dart';
 
-/// Heatmap des 12 derniers mois.
-/// - Si [activityId] est null → heatmap **globale** (toutes activités).
-/// - Sinon → heatmap d’une **activité** précise.
-class HeatmapOverviewPage extends ConsumerWidget {
-  final int? activityId;
+enum HeatmapRange { m3, m6, m12 }
+
+class HeatmapOverviewPage extends ConsumerStatefulWidget {
+  final int? activityId; // null => globale
   const HeatmapOverviewPage({super.key, this.activityId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final today = DateTime.now();
+  ConsumerState<HeatmapOverviewPage> createState() =>
+      _HeatmapOverviewPageState();
+}
+
+class _HeatmapOverviewPageState extends ConsumerState<HeatmapOverviewPage> {
+  HeatmapRange _range = HeatmapRange.m12;
+
+  ({DateTime start, DateTime end}) _window(DateTime today) {
     final end = DateTime(today.year, today.month, today.day);
-    final start = DateTime(end.year, end.month - 11, 1);
+    int minusMonths = switch (_range) {
+      HeatmapRange.m3 => 2,
+      HeatmapRange.m6 => 5,
+      HeatmapRange.m12 => 11,
+    };
+    final start = DateTime(end.year, end.month - minusMonths, 1);
+    return (start: start, end: end);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final w = _window(today);
 
     final async = ref.watch(dailyTotalsProvider((
-    activityId: activityId,
-    startLocal: start,
-    endLocal: end,
+    activityId: widget.activityId,
+    startLocal: w.start,
+    endLocal: w.end,
     )));
 
-    final title = activityId == null
-        ? 'Heatmap – globale'
-        : 'Heatmap – activité $activityId';
+    final title = widget.activityId == null
+        ? 'Heatmap — globale'
+        : 'Heatmap — activité ${widget.activityId}';
 
     return Scaffold(
-      appBar: AppBar(title: Text(title)),
+      appBar: AppBar(
+        title: Text(title),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: SegmentedButton<HeatmapRange>(
+              segments: const [
+                ButtonSegment(value: HeatmapRange.m3, label: Text('3 mois')),
+                ButtonSegment(value: HeatmapRange.m6, label: Text('6 mois')),
+                ButtonSegment(value: HeatmapRange.m12, label: Text('12 mois')),
+              ],
+              selected: {_range},
+              onSelectionChanged: (s) => setState(() => _range = s.first),
+              showSelectedIcon: false,
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                padding: WidgetStateProperty.all(
+                    const EdgeInsets.symmetric(horizontal: 6)),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: async.when(
           data: (map) {
-            // Liste continue de jours entre start..end
             final days = <DateTime>[];
-            var d = DateTime(start.year, start.month, start.day);
-            while (!d.isAfter(end)) {
+            var d = DateTime(w.start.year, w.start.month, w.start.day);
+            while (!d.isAfter(w.end)) {
               days.add(d);
               d = d.add(const Duration(days: 1));
             }
 
-            // Quantiles en minutes (pour la coloration)
-            final values = days
-                .map((day) => (map[day] ?? Duration.zero).inMinutes.toDouble())
-                .toList()
+            final values =
+            days.map((day) => (map[day] ?? Duration.zero).inMinutes.toDouble()).toList()
               ..sort();
-            double quantile(double p) =>
+            double q(double p) =>
                 values.isEmpty ? 0 : values[(p * (values.length - 1)).round()];
-            final q25 = quantile(.25),
-                q50 = quantile(.5),
-                q75 = quantile(.75),
-                qMax = values.isEmpty ? 0 : values.last;
+            final q25 = q(.25), q50 = q(.5), q75 = q(.75), qMax = values.isEmpty ? 0 : values.last;
 
-            Color cell(double v, Color base) {
+            Color shade(double v, Color base) {
               if (v <= 0) return base.withOpacity(.08);
               if (qMax <= 0) return base.withOpacity(.12);
               if (v <= q25) return base.withOpacity(.25);
@@ -88,7 +121,7 @@ class HeatmapOverviewPage extends ConsumerWidget {
                                   }
                                   final day = days[idx];
                                   final dur = map[day] ?? Duration.zero;
-                                  final valMin = dur.inMinutes.toDouble();
+                                  final v = dur.inMinutes.toDouble();
 
                                   return GestureDetector(
                                     onTap: () {
@@ -105,13 +138,13 @@ class HeatmapOverviewPage extends ConsumerWidget {
                                       );
                                     },
                                     onDoubleTap: () {
-                                      if (activityId == null) {
+                                      if (widget.activityId == null) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
                                             content: Text(
-                                              'Sélectionne une activité pour voir le détail du jour.',
-                                            ),
-                                            duration: Duration(milliseconds: 900),
+                                                'Sélectionne une activité pour le détail du jour.'),
+                                            duration:
+                                            Duration(milliseconds: 900),
                                           ),
                                         );
                                         return;
@@ -119,8 +152,8 @@ class HeatmapOverviewPage extends ConsumerWidget {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
                                           builder: (_) => DayDetailPage(
-                                            activityId: activityId!,
-                                            day: day, // ✅ paramètre correct
+                                            activityId: widget.activityId!,
+                                            day: day,
                                           ),
                                         ),
                                       );
@@ -130,7 +163,7 @@ class HeatmapOverviewPage extends ConsumerWidget {
                                       height: 14,
                                       margin: const EdgeInsets.all(2),
                                       decoration: BoxDecoration(
-                                        color: cell(valMin, base),
+                                        color: shade(v, base),
                                         borderRadius: BorderRadius.circular(3),
                                       ),
                                     ),
@@ -154,7 +187,7 @@ class HeatmapOverviewPage extends ConsumerWidget {
                         height: 10,
                         margin: const EdgeInsets.symmetric(horizontal: 3),
                         decoration: BoxDecoration(
-                          color: cell(qMax * v, base),
+                          color: shade(qMax * v, base),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
@@ -174,37 +207,31 @@ class HeatmapOverviewPage extends ConsumerWidget {
   }
 }
 
-/// Provider : totaux journaliers (pauses soustraites) entre [startLocal..endLocal].
-/// - Si [activityId] est null → agrège **toutes** les activités.
-/// - Sinon → filtre par l’activité donnée.
+/// Provider : totaux journaliers (pauses soustraites)
 final dailyTotalsProvider = FutureProvider.family<
     Map<DateTime, Duration>,
     ({int? activityId, DateTime startLocal, DateTime endLocal})>((ref, args) async {
   final db = ref.read(databaseProvider);
 
-  // Fenêtre en UTC (requêtes)
   final startUtc = DateTime(args.startLocal.year, args.startLocal.month, args.startLocal.day).toUtc();
   final endUtc = DateTime(args.endLocal.year, args.endLocal.month, args.endLocal.day, 23, 59, 59)
       .toUtc()
-      .add(const Duration(seconds: 1)); // exclusif
+      .add(const Duration(seconds: 1));
 
   final startSec = startUtc.millisecondsSinceEpoch ~/ 1000;
   final endSec = endUtc.millisecondsSinceEpoch ~/ 1000;
 
-  final query = db.select(db.sessions)
+  final q = db.select(db.sessions)
     ..where((s) =>
     s.startUtc.isSmallerThanValue(endSec) &
     (s.endUtc.isNull() | s.endUtc!.isBiggerOrEqualValue(startSec)));
-
   if (args.activityId != null) {
-    query.where((s) => s.activityId.equals(args.activityId!));
+    q.where((s) => s.activityId.equals(args.activityId!));
   }
-
-  query.orderBy([(t) => drift.OrderingTerm.asc(t.startUtc)]);
-  final sessions = await query.get();
+  q.orderBy([(t) => drift.OrderingTerm.asc(t.startUtc)]);
+  final sessions = await q.get();
   if (sessions.isEmpty) return <DateTime, Duration>{};
 
-  // Pauses par session
   final ids = sessions.map((s) => s.id).toList();
   final pausesRows =
   await (db.select(db.pauses)..where((p) => p.sessionId.isIn(ids))).get();
@@ -213,7 +240,6 @@ final dailyTotalsProvider = FutureProvider.family<
     (pausesBySession[p.sessionId] ??= []).add(p);
   }
 
-  // Accumulateur par jour local
   final totals = <DateTime, Duration>{};
 
   for (final s in sessions) {
@@ -223,21 +249,18 @@ final dailyTotalsProvider = FutureProvider.family<
         ? DateTime.now().toUtc()
         : DateTime.fromMillisecondsSinceEpoch(s.endUtc! * 1000, isUtc: true);
 
-    // Clip sur la fenêtre globale
     final clipStart = sStartUtc.isBefore(startUtc) ? startUtc : sStartUtc;
     final clipEnd = sEndUtc.isAfter(endUtc) ? endUtc : sEndUtc;
     if (!clipEnd.isAfter(clipStart)) continue;
 
-    // Découpe par jour local
     DateTime cursorLocal = clipStart.toLocal();
     final endLocal = clipEnd.toLocal();
 
     while (cursorLocal.isBefore(endLocal)) {
-      final dayKey = DateTime(cursorLocal.year, cursorLocal.month, cursorLocal.day);
-      final dayStartLocal = DateTime(dayKey.year, dayKey.month, dayKey.day);
+      final key = DateTime(cursorLocal.year, cursorLocal.month, cursorLocal.day);
+      final dayStartLocal = DateTime(key.year, key.month, key.day);
       final dayEndLocal = dayStartLocal.add(const Duration(days: 1));
 
-      // Fenêtre du jour en UTC
       final dayStartUtc = dayStartLocal.toUtc();
       final dayEndUtc = dayEndLocal.toUtc();
 
@@ -250,12 +273,10 @@ final dailyTotalsProvider = FutureProvider.family<
       );
 
       if (eff.inSeconds > 0) {
-        totals[dayKey] = (totals[dayKey] ?? Duration.zero) + eff;
+        totals[key] = (totals[key] ?? Duration.zero) + eff;
       }
-
       cursorLocal = dayEndLocal;
     }
   }
-
   return totals;
 });
